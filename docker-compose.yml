@@ -1,0 +1,77 @@
+#COMPOSER FOR SUB SERVICES, dockerfiles
+version: '3.0'
+services: 
+  course-mysql:
+    #pull latest mysql images from docker hub repository
+    image: mysql:latest
+    environment: 
+      - MYSQL_ROOT_PASSWORD=devuser2019$$
+      - MYSQL_DATABASE=ms_user
+      - MYSQL_USER=demo
+      - MYSQL_PASSWORD=demo
+    ports: 
+      - 3306:3306
+    container_name: mysql
+  cassandra:
+    image: cassandra:latest  
+    environment: 
+      - "MAX_HEAP_SIZE=256MB"
+    ports: 
+      - 9042:9042
+    container_name: cassandra
+  discovery-service:
+    build: ./ms-eureka-discovery-service
+    entrypoint: /wait-for-it.sh mysql:3306 -- java -Djava.security.egd=file:/dev/./urandom -Dspring.profiles.active=container -jar app.jar
+    ports: 
+      - 8761:8761
+    links: 
+      - course-mysql:mysql
+  user-service:
+    build: ./ms-user-management
+     #wait until mysql changesets are implemented. Then call app.jar
+    entrypoint: /wait-for-it.sh discovery-service:8761 -- java -Djava.security.egd=file:/dev/./urandom -Dspring.profiles.active=container -jar app.jar
+    depends_on: 
+      - discovery-service
+    links: 
+      - course-mysql:mysql
+    ports: 
+      - 8000:8000
+  log-service:
+    build: ./ms-log-management
+    environment: 
+      SPRING_DATA_CASSANDRA_CONTACT_POINTS: cassandra
+    entrypoint: /wait-for-it.sh cassandra:9042 -- java -Djava.security.egd=file:/dev/./urandom -Dspring.profiles.active=container -jar app.jar
+    depends_on: 
+      - cassandra
+      - discovery-service
+    ports: 
+      - 8002:8002
+  course-service:
+    build: ./ms-course-management
+    entrypoint: /wait-for-it.sh discovery-service:8761 -- java -Djava.security.egd=file:/dev/./urandom -Dspring.profiles.active=container -jar app.jar
+    depends_on: 
+      - course-mysql
+      - discovery-service
+      - user-service
+      - log-service
+    links:
+      - course-mysql:mysql
+    ports: 
+      - 8001:8001
+  gateway-service:
+    build: ./ms-zuul-gateway-service
+    entrypoint: /wait-for-it.sh course-service:8001 -- java -Djava.security.egd=file:/dev/./urandom -Dspring.profiles.active=container -jar app.jar
+    depends_on: 
+      - discovery-service
+      - user-service
+      - log-service
+      - course-service
+    ports: 
+      - 8765:8765
+  course-client:
+    build: ./course-enrollment-client
+    ports: 
+      - 4200:80
+networks:
+  default:
+    driver: bridge  

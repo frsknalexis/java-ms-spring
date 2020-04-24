@@ -1,0 +1,6 @@
+spring:
+  profiles: container
+  datasource:    url: jdbc:mysql://mysql:3306/ms_course?useUnicode=true&useLegacyDatetimeCode=false&serverTimezone=UTC&createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false
+    username: demo
+    password: demo
+    initialization-mode: always 

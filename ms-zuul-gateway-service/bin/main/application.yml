@@ -1,0 +1,3 @@
+spring:
+  profiles: container
+  application:    name: gateway-service

@@ -5,8 +5,11 @@ plugins {
 }
 
 group = 'com.dev.app'
-version = '0.0.1-SNAPSHOT'
+version = '0.0.1'
 sourceCompatibility = '1.8'
+jar {
+	archivesBaseName = 'microservice-user-management'
+}
 
 configurations {
 	developmentOnly
